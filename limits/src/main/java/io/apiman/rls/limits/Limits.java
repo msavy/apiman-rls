@@ -27,48 +27,48 @@ import io.apiman.rls.limits.exceptions.LimitPeriodConflictException;
 
 import java.time.ZonedDateTime;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manages the full list of limits, allowing them to be created, deleted, and incremented.  This
  * is intended to be a singleton.
- * 
+ *
  * @author eric.wittmann@gmail.com
  */
 public class Limits {
-    
+
     private static final Limits sInstance = new Limits();
     public static final Limits getInstance() {
         return sInstance;
     }
-    
-    private HashMap<String, StoredLimit> limits = new HashMap<>(10000);
+
+    private ConcurrentHashMap<String, StoredLimit> limits = new ConcurrentHashMap<>(10000);
 
     /**
      * Constructor.
      */
     protected Limits() {
     }
-    
+
     /**
      * Creates a new limit (by ID) and returns it.  If the limit already exists,
      * an attempt will be made to increment it by the amount of "value" in the
      * newLimit object.
-     * 
+     *
      * The caller must pass in a timestamp indicating when this operation was
      * intended to take place.  This is important for operational accuracy (the
-     * timestamp indicates the moment the system received the request for the 
+     * timestamp indicates the moment the system received the request for the
      * limit to be createdOrUpdated).
-     * 
-     * If the limit already exists, it is possible that incrementing it by the 
+     *
+     * If the limit already exists, it is possible that incrementing it by the
      * requested amount will result in the limit being exceeded.  In this case
      * a {@link LimitExceededException} is thrown.
-     * 
-     * If the limit already exists, and the configured "period" of the limit 
+     *
+     * If the limit already exists, and the configured "period" of the limit
      * conflicts with the period requested in "newLimit", then a conflict is
      * detected and a {@link LimitPeriodConflictException} is thrown.
-     *  
+     *
      * @param when
      * @param newLimit
      * @throws LimitExceededException
@@ -87,23 +87,23 @@ public class Limits {
         limit.setResetOn(nextResetTime(when, limit.getPeriod()));
         limit.setLinks(new LimitLinksBean());
         storedLimit.setDetails(limit);
-        
+
         StoredLimit prevStoredLimit = limits.putIfAbsent(newLimit.getId(), storedLimit);
         if (prevStoredLimit != null) {
             storedLimit = prevStoredLimit;
             limit = storedLimit.getDetails().clone();
         }
-        
+
         // Check for period mismatch
         if (limit.getPeriod() != newLimit.getPeriod()) {
             throw new LimitPeriodConflictException();
         }
-        
+
         // Now increment the limit by the indicated amount
         if (newLimit.getValue() > 0) {
             limit = doIncrementLimit(when, storedLimit, newLimit.getValue());
         }
-        
+
         return limit;
     }
 
@@ -143,10 +143,10 @@ public class Limits {
             }
             idx++;
         }
-        
+
         return list;
     }
-    
+
     /**
      * Increments a single limit by a given amount.
      * @param limitId
@@ -160,7 +160,7 @@ public class Limits {
         if (storedLimit == null) {
             throw new LimitNotFoundException();
         }
-        
+
         return doIncrementLimit(when, storedLimit, incrementBy);
     }
 
@@ -186,33 +186,37 @@ public class Limits {
      * @throws LimitExceededException
      */
     protected final static LimitBean doIncrementLimit(ZonedDateTime when, StoredLimit storedLimit, long value) throws LimitExceededException {
-//        synchronized (storedLimit.getMutex()) {
+        //synchronized (storedLimit.getMutex()) {
             LimitBean limit = storedLimit.getDetails();
-            
+
             // Do we need to reset the rate limit?
-            if (when.toInstant().toEpochMilli() >= limit.getResetOn().toInstant().toEpochMilli()) {
-                limit.setResetOn(nextResetTime(when, limit.getPeriod()));
-                limit.setValue(0);
-                limit.setRemainingValue(limit.getMaxValue());
-            }
-            
+
+            limit.getValue().getAndUpdate(v -> {
+                if (when.toInstant().toEpochMilli() >= limit.getResetOn().toInstant().toEpochMilli()) {
+                    // This could be called multiple times, be idempotent
+                    limit.setResetOn(nextResetTime(when, limit.getPeriod()));
+                    limit.setRemainingValue(limit.getMaxValue());
+                    return 0;
+                }
+                return v;
+            });
+
             // Check to see if we *can* increment the limit
             if (limit.getRemainingValue() < value) {
                 throw new LimitExceededException(limit.getResetOn());
             }
-            
+
             // Now do the increment.
-            long newValue = limit.getValue() + value;
-            limit.setValue(newValue);
-            limit.setRemainingValue(limit.getMaxValue() - newValue);
-            
+            limit.getValue().incrementAndGet();
+            limit.setRemainingValue(limit.getMaxValue() - limit.getValue().get());
+
             // Set the last-modified-on date
-            limit.setModifiedOn(when);
-            
+            limit.setModifiedOn(when); // Last person will win, which seems fine.
+
             // return a copy of the mutated limit, allowing the caller to update the links
             // and ensure that another thread won't modify it before it can do something with it
             return limit.clone();
-//        }
+       // }
     }
 
     /**

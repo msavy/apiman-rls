@@ -19,14 +19,15 @@ package io.apiman.rls.beans.rest;
 import io.apiman.rls.beans.LimitPeriod;
 
 import java.time.ZonedDateTime;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author eric.wittmann@gmail.com
  */
 public class LimitBean implements Cloneable {
-    
+
     private String id;
-    private long value;
+    private final AtomicInteger value = new AtomicInteger();
     private long maxValue;
     private LimitPeriod period;
     private long remainingValue;
@@ -58,15 +59,8 @@ public class LimitBean implements Cloneable {
     /**
      * @return the value
      */
-    public long getValue() {
+    public AtomicInteger getValue() {
         return value;
-    }
-
-    /**
-     * @param value the value to set
-     */
-    public void setValue(long value) {
-        this.value = value;
     }
 
     /**
@@ -166,7 +160,7 @@ public class LimitBean implements Cloneable {
     public void setLinks(LimitLinksBean links) {
         this.links = links;
     }
-    
+
     /**
      * @see java.lang.Object#clone()
      */
@@ -181,7 +175,7 @@ public class LimitBean implements Cloneable {
         clone.setPeriod(getPeriod());
         clone.setRemainingValue(getRemainingValue());
         clone.setResetOn(getResetOn());
-        clone.setValue(getValue());
+        clone.getValue().set(getValue().get());
         return clone;
     }
 
