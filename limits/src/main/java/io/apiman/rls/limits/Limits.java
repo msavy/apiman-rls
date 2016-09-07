@@ -80,7 +80,7 @@ public class Limits {
         LimitBean limit = new LimitBean();
         limit.setId(newLimit.getId());
         limit.setMaxValue(newLimit.getMaxValue());
-        limit.setRemainingValue(newLimit.getMaxValue());
+        //limit.setRemainingValue(newLimit.getMaxValue());
         limit.setPeriod(newLimit.getPeriod());
         limit.setCreatedOn(when);
         limit.setModifiedOn(when);
@@ -195,7 +195,7 @@ public class Limits {
                 if (when.toInstant().toEpochMilli() >= limit.getResetOn().toInstant().toEpochMilli()) {
                     // This could be called multiple times, be idempotent
                     limit.setResetOn(nextResetTime(when, limit.getPeriod()));
-                    limit.setRemainingValue(limit.getMaxValue());
+                    limit.reset(); // Not sure if this is safe, possibly not.
                     return 0;
                 }
                 return v;
@@ -208,7 +208,7 @@ public class Limits {
 
             // Now do the increment.
             limit.getValue().incrementAndGet();
-            limit.setRemainingValue(limit.getMaxValue() - limit.getValue().get());
+            //limit.setRemainingValue(limit.getMaxValue() - limit.getValue().get());
 
             // Set the last-modified-on date
             limit.setModifiedOn(when); // Last person will win, which seems fine.

@@ -37,17 +37,17 @@ import org.junit.Test;
  */
 @SuppressWarnings("nls")
 public class LimitsTest {
-    
+
     @Test(expected=LimitNotFoundException.class)
     public void testLimitNotFound() throws Exception {
         Limits limits = new Limits();
         limits.getLimit("test-limit");
     }
-    
+
     @Test
     public void testCreateLimit() throws Exception {
         Limits limits = new Limits();
-        
+
         NewLimitBean newLimit = new NewLimitBean();
         newLimit.setId("test-limit-1");
         newLimit.setMaxValue(10l);
@@ -58,7 +58,7 @@ public class LimitsTest {
         Assert.assertEquals("test-limit-1", limit.getId());
         Assert.assertEquals(10l, limit.getMaxValue());
         Assert.assertEquals(10l, limit.getRemainingValue());
-        Assert.assertEquals(0l, limit.getValue());
+        Assert.assertEquals(0l, limit.getValue().get());
         Assert.assertEquals(LimitPeriod.minute, limit.getPeriod());
         Assert.assertEquals("2015-10-07T17:12:39Z[UTC]", limit.getCreatedOn().toString());
         Assert.assertEquals("2015-10-07T17:13Z[UTC]", limit.getResetOn().toString());
@@ -74,7 +74,7 @@ public class LimitsTest {
         Assert.assertEquals("test-limit-2", limit.getId());
         Assert.assertEquals(10000l, limit.getMaxValue());
         Assert.assertEquals(10000l, limit.getRemainingValue());
-        Assert.assertEquals(0l, limit.getValue());
+        Assert.assertEquals(0l, limit.getValue().get());
         Assert.assertEquals(LimitPeriod.month, limit.getPeriod());
         Assert.assertEquals("2015-10-07T17:12:39Z[UTC]", limit.getCreatedOn().toString());
         Assert.assertEquals("2015-11-01T00:00Z[UTC]", limit.getResetOn().toString());
@@ -90,7 +90,7 @@ public class LimitsTest {
         Assert.assertEquals("test-limit-3", limit.getId());
         Assert.assertEquals(10000l, limit.getMaxValue());
         Assert.assertEquals(10000l - 100l, limit.getRemainingValue());
-        Assert.assertEquals(100l, limit.getValue());
+        Assert.assertEquals(100l, limit.getValue().get());
         Assert.assertEquals(LimitPeriod.month, limit.getPeriod());
         Assert.assertEquals("2015-10-07T17:12:39Z[UTC]", limit.getCreatedOn().toString());
         Assert.assertEquals("2015-11-01T00:00Z[UTC]", limit.getResetOn().toString());
@@ -100,7 +100,7 @@ public class LimitsTest {
     @Test(expected=LimitPeriodConflictException.class)
     public void testCreateConflict() throws Exception {
         Limits limits = new Limits();
-        
+
         NewLimitBean newLimit = new NewLimitBean();
         newLimit.setId("test-limit-1");
         newLimit.setMaxValue(10l);
@@ -123,7 +123,7 @@ public class LimitsTest {
     @Test
     public void testCreateLimitAsIncrement() throws Exception {
         Limits limits = new Limits();
-        
+
         NewLimitBean newLimit = new NewLimitBean();
         newLimit.setId("test-limit-1");
         newLimit.setMaxValue(10l);
@@ -134,18 +134,18 @@ public class LimitsTest {
         Assert.assertEquals("test-limit-1", limit.getId());
         Assert.assertEquals(10l, limit.getMaxValue());
         Assert.assertEquals(10l, limit.getRemainingValue());
-        Assert.assertEquals(0l, limit.getValue());
+        Assert.assertEquals(0l, limit.getValue().get());
         Assert.assertEquals(LimitPeriod.hour, limit.getPeriod());
         Assert.assertEquals("2015-10-07T17:12:39Z[UTC]", limit.getCreatedOn().toString());
         Assert.assertEquals("2015-10-07T18:00Z[UTC]", limit.getResetOn().toString());
         Assert.assertEquals("2015-10-07T17:12:39Z[UTC]", limit.getModifiedOn().toString());
-        
+
         newLimit.setValue(1);
         for (int i = 0; i < 10; i++) {
             ZonedDateTime time = ZonedDateTime.of(2015, 10, 7, 17, 12, 39 + i, 0, ZoneId.of("UTC"));
             limits.createLimit(time, newLimit);
         }
-        
+
         // We've reached the limit - the next one should fail.
         ZonedDateTime time = ZonedDateTime.of(2015, 10, 7, 17, 12, 39 + 11, 0, ZoneId.of("UTC"));
         try {
@@ -158,7 +158,7 @@ public class LimitsTest {
     @Test
     public void testIncrementPerHour() throws Exception {
         Limits limits = new Limits();
-        
+
         NewLimitBean newLimit = new NewLimitBean();
         newLimit.setId("test-limit-1");
         newLimit.setMaxValue(10l);
@@ -169,19 +169,19 @@ public class LimitsTest {
         Assert.assertEquals("test-limit-1", limit.getId());
         Assert.assertEquals(10l, limit.getMaxValue());
         Assert.assertEquals(10l, limit.getRemainingValue());
-        Assert.assertEquals(0l, limit.getValue());
+        Assert.assertEquals(0l, limit.getValue().get());
         Assert.assertEquals(LimitPeriod.hour, limit.getPeriod());
         Assert.assertEquals("2015-10-07T17:12:39Z[UTC]", limit.getCreatedOn().toString());
         Assert.assertEquals("2015-10-07T18:00Z[UTC]", limit.getResetOn().toString());
         Assert.assertEquals("2015-10-07T17:12:39Z[UTC]", limit.getModifiedOn().toString());
-        
+
         newLimit.setValue(1);
         for (int i = 0; i < 10; i++) {
             ZonedDateTime time = ZonedDateTime.of(2015, 10, 7, 17, 12, 39 + i, 0, ZoneId.of("UTC"));
             LimitBean incrementLimit = limits.incrementLimit(time, "test-limit-1", 1);
             Assert.assertEquals(10 - i - 1, incrementLimit.getRemainingValue());
         }
-        
+
         // We've reached the limit - the next one should fail.
         ZonedDateTime time = ZonedDateTime.of(2015, 10, 7, 17, 12, 39 + 11, 0, ZoneId.of("UTC"));
         try {
@@ -194,7 +194,7 @@ public class LimitsTest {
     @Test
     public void testIncrementPerHourThreaded() throws Exception {
         final Limits limits = new Limits();
-        
+
         final NewLimitBean newLimit = new NewLimitBean();
         newLimit.setId("test-limit-1");
         newLimit.setMaxValue(1000l);
@@ -205,14 +205,14 @@ public class LimitsTest {
         Assert.assertEquals("test-limit-1", limit.getId());
         Assert.assertEquals(1000l, limit.getMaxValue());
         Assert.assertEquals(1000l, limit.getRemainingValue());
-        Assert.assertEquals(0l, limit.getValue());
+        Assert.assertEquals(0l, limit.getValue().get());
         Assert.assertEquals(LimitPeriod.hour, limit.getPeriod());
         Assert.assertEquals("2015-10-07T17:12:39Z[UTC]", limit.getCreatedOn().toString());
         Assert.assertEquals("2015-10-07T18:00Z[UTC]", limit.getResetOn().toString());
         Assert.assertEquals("2015-10-07T17:12:39Z[UTC]", limit.getModifiedOn().toString());
-        
+
         newLimit.setValue(1);
-        
+
         // Now spin up 100 threads, each one will increment 10 times - they should all pass
         CountDownLatch latch = new CountDownLatch(100);
         final List<String> errors = new ArrayList<>();
@@ -236,10 +236,10 @@ public class LimitsTest {
             thread.start();
         }
         latch.await();
-        
+
         // There should be no errors in the list
         Assert.assertTrue("Error(s) detected: " + errors.toArray(), errors.isEmpty());
-        
+
         // We've reached the limit - the next one should fail.
         ZonedDateTime time = ZonedDateTime.of(2015, 10, 7, 17, 12, 39 + 11, 0, ZoneId.of("UTC"));
         try {
@@ -252,7 +252,7 @@ public class LimitsTest {
     @Test
     public void testIncrementPerSecondWithReset() throws Exception {
         Limits limits = new Limits();
-        
+
         NewLimitBean newLimit = new NewLimitBean();
         newLimit.setId("test-limit-1");
         newLimit.setMaxValue(10l);
@@ -263,19 +263,19 @@ public class LimitsTest {
         Assert.assertEquals("test-limit-1", limit.getId());
         Assert.assertEquals(10l, limit.getMaxValue());
         Assert.assertEquals(10l, limit.getRemainingValue());
-        Assert.assertEquals(0l, limit.getValue());
+        Assert.assertEquals(0l, limit.getValue().get());
         Assert.assertEquals(LimitPeriod.second, limit.getPeriod());
         Assert.assertEquals("2015-10-07T17:12:39Z[UTC]", limit.getCreatedOn().toString());
         Assert.assertEquals("2015-10-07T17:12:40Z[UTC]", limit.getResetOn().toString());
         Assert.assertEquals("2015-10-07T17:12:39Z[UTC]", limit.getModifiedOn().toString());
-        
+
         newLimit.setValue(1);
         for (int i = 0; i < 10; i++) {
             ZonedDateTime time = ZonedDateTime.of(2015, 10, 7, 17, 12, 39, i, ZoneId.of("UTC"));
             LimitBean incrementLimit = limits.incrementLimit(time, "test-limit-1", 1);
             Assert.assertEquals(10 - i - 1, incrementLimit.getRemainingValue());
         }
-        
+
         // We've reached the limit - the next one should fail.
         ZonedDateTime time = ZonedDateTime.of(2015, 10, 7, 17, 12, 39, 11, ZoneId.of("UTC"));
         try {
@@ -283,7 +283,7 @@ public class LimitsTest {
         } catch (LimitExceededException e) {
             Assert.assertEquals("2015-10-07T17:12:40Z[UTC]", e.getResetOn().toString());
         }
-        
+
         // If the next request comes in after the reset time, then it should work again
         time = ZonedDateTime.of(2015, 10, 7, 17, 12, 40, 99, ZoneId.of("UTC"));
         LimitBean incrementLimit = limits.incrementLimit(time, "test-limit-1", 1);
@@ -294,7 +294,7 @@ public class LimitsTest {
     @Test
     public void testGetLimit() throws Exception {
         Limits limits = new Limits();
-        
+
         NewLimitBean newLimit = new NewLimitBean();
         newLimit.setId("test-limit-1");
         newLimit.setMaxValue(10l);
@@ -305,7 +305,7 @@ public class LimitsTest {
         Assert.assertEquals("test-limit-1", limit.getId());
         Assert.assertEquals(10l, limit.getMaxValue());
         Assert.assertEquals(10l, limit.getRemainingValue());
-        Assert.assertEquals(0l, limit.getValue());
+        Assert.assertEquals(0l, limit.getValue().get());
         Assert.assertEquals(LimitPeriod.minute, limit.getPeriod());
         Assert.assertEquals("2015-10-07T17:12:39Z[UTC]", limit.getCreatedOn().toString());
         Assert.assertEquals("2015-10-07T17:13Z[UTC]", limit.getResetOn().toString());
@@ -315,7 +315,7 @@ public class LimitsTest {
         Assert.assertEquals("test-limit-1", retrievedLimit.getId());
         Assert.assertEquals(10l, retrievedLimit.getMaxValue());
         Assert.assertEquals(10l, retrievedLimit.getRemainingValue());
-        Assert.assertEquals(0l, retrievedLimit.getValue());
+        Assert.assertEquals(0l, retrievedLimit.getValue().get());
         Assert.assertEquals(LimitPeriod.minute, retrievedLimit.getPeriod());
         Assert.assertEquals("2015-10-07T17:12:39Z[UTC]", retrievedLimit.getCreatedOn().toString());
         Assert.assertEquals("2015-10-07T17:13Z[UTC]", retrievedLimit.getResetOn().toString());
@@ -325,7 +325,7 @@ public class LimitsTest {
     @Test
     public void testDeleteLimit() throws Exception {
         Limits limits = new Limits();
-        
+
         NewLimitBean newLimit = new NewLimitBean();
         newLimit.setId("test-limit-1");
         newLimit.setMaxValue(10l);
@@ -336,14 +336,14 @@ public class LimitsTest {
         Assert.assertEquals("test-limit-1", limit.getId());
         Assert.assertEquals(10l, limit.getMaxValue());
         Assert.assertEquals(10l, limit.getRemainingValue());
-        Assert.assertEquals(0l, limit.getValue());
+        Assert.assertEquals(0l, limit.getValue().get());
         Assert.assertEquals(LimitPeriod.minute, limit.getPeriod());
         Assert.assertEquals("2015-10-07T17:12:39Z[UTC]", limit.getCreatedOn().toString());
         Assert.assertEquals("2015-10-07T17:13Z[UTC]", limit.getResetOn().toString());
         Assert.assertEquals("2015-10-07T17:12:39Z[UTC]", limit.getModifiedOn().toString());
 
         limits.deleteLimit(ZonedDateTime.now(ZoneId.of("UTC")), "test-limit-1");
-        
+
         try {
             limits.getLimit("test-limit-1");
             Assert.fail("Expected a limit-not-found error.");
@@ -355,7 +355,7 @@ public class LimitsTest {
     @Test(expected=LimitNotFoundException.class)
     public void testDeleteLimitNotFound() throws Exception {
         Limits limits = new Limits();
-        
+
         limits.deleteLimit(ZonedDateTime.now(ZoneId.of("UTC")), "test-limit-1");
     }
 

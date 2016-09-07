@@ -19,7 +19,7 @@ package io.apiman.rls.beans.rest;
 import io.apiman.rls.beans.LimitPeriod;
 
 import java.time.ZonedDateTime;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author eric.wittmann@gmail.com
@@ -27,10 +27,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class LimitBean implements Cloneable {
 
     private String id;
-    private final AtomicInteger value = new AtomicInteger();
+    private final AtomicLong value = new AtomicLong();
     private long maxValue;
     private LimitPeriod period;
-    private long remainingValue;
+    //private long remainingValue;
     private ZonedDateTime resetOn;
     private ZonedDateTime createdOn;
     private ZonedDateTime modifiedOn;
@@ -59,7 +59,7 @@ public class LimitBean implements Cloneable {
     /**
      * @return the value
      */
-    public AtomicInteger getValue() {
+    public AtomicLong getValue() {
         return value;
     }
 
@@ -91,19 +91,19 @@ public class LimitBean implements Cloneable {
         this.period = period;
     }
 
-    /**
-     * @return the remainingValue
-     */
-    public long getRemainingValue() {
-        return remainingValue;
-    }
-
-    /**
-     * @param remainingValue the remainingValue to set
-     */
-    public void setRemainingValue(long remainingValue) {
-        this.remainingValue = remainingValue;
-    }
+//    /**
+//     * @return the remainingValue
+//     */
+//    public long getRemainingValue() {
+//        return remainingValue;
+//    }
+//
+//    /**
+//     * @param remainingValue the remainingValue to set
+//     */
+//    protected void setRemainingValue(long remainingValue) {
+//        this.remainingValue = remainingValue;
+//    }
 
     /**
      * @return the resetOn
@@ -173,10 +173,19 @@ public class LimitBean implements Cloneable {
         clone.setMaxValue(getMaxValue());
         clone.setModifiedOn(getModifiedOn());
         clone.setPeriod(getPeriod());
-        clone.setRemainingValue(getRemainingValue());
+        //clone.setRemainingValue(getRemainingValue());
         clone.setResetOn(getResetOn());
         clone.getValue().set(getValue().get());
         return clone;
+    }
+
+    public void reset() {
+        // TODO Auto-generated method stub
+        value.set(maxValue);
+    }
+
+    public long getRemainingValue() {
+        return getMaxValue() - getValue().get();
     }
 
 }
